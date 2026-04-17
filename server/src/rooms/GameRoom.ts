@@ -18,6 +18,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
     this.state.roomName   = options.roomName ?? "Room";
     this.state.maxPlayers = Math.min(Math.max(options.maxPlayers ?? 2, 2), CONFIG.MAX_PLAYERS);
     this.maxClients = this.state.maxPlayers;
+    this.setMetadata({ phase: "waiting", roomName: this.state.roomName });
 
     this.onMessage("input",      (client, msg: InputMessage)     => this.handleInput(client, msg));
     this.onMessage("start_race", (client, _msg: StartRaceMessage) => this.handleStartRace(client));
@@ -87,6 +88,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
   private startCountdown() {
     this.state.phase     = "countdown";
     this.state.countdown = CONFIG.COUNTDOWN_SECONDS;
+    this.setMetadata({ phase: "countdown", roomName: this.state.roomName });
 
     const tick = setInterval(() => {
       this.state.countdown--;
@@ -100,6 +102,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
   private startRace() {
     this.state.phase   = "racing";
     this.state.raceNumber++;
+    this.setMetadata({ phase: "racing", roomName: this.state.roomName });
     this.finishCounter = 0;
     this.lobbySize     = this.state.players.size;
 
@@ -184,6 +187,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
       this.physicsInterval = null;
     }
     this.state.phase = "results";
+    this.setMetadata({ phase: "results", roomName: this.state.roomName });
 
     const results = [...this.state.players.values()].map((p) => ({
       playerId:     p.id,
@@ -199,6 +203,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
     setTimeout(() => {
       if (this.state.phase === "results") {
         this.state.phase = "waiting";
+        this.setMetadata({ phase: "waiting", roomName: this.state.roomName });
       }
     }, 8000);
   }
