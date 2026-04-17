@@ -145,9 +145,8 @@ describe("PhysicsEngine", () => {
 
       PhysicsEngine.tick(state as never, tiles, 999999, DT, room);
 
-      // After jump: vy = JUMP_VELOCITY + GRAVITY * dt (gravity applied before jump check)
-      // But jump overwrites vy: player.vy = JUMP_VELOCITY (then position integrates).
-      // The spec order: gravity → jump → resolve. So vy = JUMP_VELOCITY after jump override.
+      // Actual implementation order: jump (sets vy=JUMP_VELOCITY) → then gravity applied
+      // So final vy = JUMP_VELOCITY + GRAVITY * dt (still negative — moving upward)
       expect(player.vy).toBeLessThan(0);
       expect(player.vy).toBeCloseTo(CONFIG.JUMP_VELOCITY + CONFIG.GRAVITY * DT, 0);
     });
