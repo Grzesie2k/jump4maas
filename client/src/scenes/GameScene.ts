@@ -23,10 +23,12 @@ export class GameScene extends Phaser.Scene {
   private platformGroup!: Phaser.Physics.Arcade.StaticGroup;
 
   // Lokalna predykcja
-  private localX:        number  = 0;
-  private localY:        number  = 0;
-  private localVy:       number  = 0;
-  private localGrounded: boolean = false;
+  private localX:          number  = 0;
+  private localY:          number  = 0;
+  private localVy:         number  = 0;
+  private localGrounded:   boolean = false;
+  private localEliminated:   boolean = false;
+  private cameraFollowing:   boolean = false;
 
   // Input state
   private keys!:        Phaser.Types.Input.Keyboard.CursorKeys;
@@ -101,7 +103,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Client-side prediction dla lokalnego gracza
-    this.applyLocalPrediction(left, right, jump, delta / 1000);
+    if (!this.localEliminated) {
+      this.applyLocalPrediction(left, right, jump, delta / 1000);
+    }
 
     // Interpolacja zdalnych graczy (spec-09)
     const now = Date.now();
@@ -152,17 +156,30 @@ export class GameScene extends Phaser.Scene {
           });
         }
         // Korekta predykcji lokalnej
-        const diffX = Math.abs(player.x - this.localX);
-        const diffY = Math.abs(player.y - this.localY);
-        if (diffX > 16 || diffY > 16) {
-          this.localX = Phaser.Math.Linear(this.localX, player.x, 0.3);
-          this.localY = Phaser.Math.Linear(this.localY, player.y, 0.3);
+        if (player.eliminated) {
+          this.localEliminated = true;
+          this.localX  = player.x;
+          this.localY  = player.y;
+          this.localVy = 0;
+        } else {
+          const diffX = Math.abs(player.x - this.localX);
+          const diffY = Math.abs(player.y - this.localY);
+          if (diffX > 200 || diffY > 200) {
+            // Respawn — teleport immediately so gravity doesn't fight the lerp
+            this.localX  = player.x;
+            this.localY  = player.y;
+            this.localVy = 0;
+          } else if (diffX > 16 || diffY > 16) {
+            this.localX = Phaser.Math.Linear(this.localX, player.x, 0.3);
+            this.localY = Phaser.Math.Linear(this.localY, player.y, 0.3);
+          }
         }
         const mySprite = this.playerSprites.get(id);
         mySprite?.update(this.localX, this.localY, player);
         
-        if (mySprite) {
-          this.cameras.main.startFollow(mySprite.sprite, true, 0.1, 0);
+        if (mySprite && !this.cameraFollowing) {
+          this.cameras?.main?.startFollow(mySprite.sprite, true, 0.1, 0);
+          this.cameraFollowing = true;
         }
         return;
       }
