@@ -2,10 +2,11 @@ import { Server } from "colyseus";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import express from "express";
 import { createServer } from "http";
+import { join } from "path";
 import { GameRoom } from "./rooms/GameRoom";
 
 const app = express();
-app.use(express.static("../../client/dist"));
+app.use(express.static(join(__dirname, "../../client/dist")));
 
 const httpServer = createServer(app);
 const gameServer = new Server({

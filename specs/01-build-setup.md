@@ -106,11 +106,25 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    hmr: { port: 3001 },
+    proxy: {
+      "/matchmake": {
+        target: "http://localhost:2567",
+        changeOrigin: true,
+      },
+      "/": {
+        target: "ws://localhost:2567",
+        ws: true,
+        changeOrigin: true,
+        bypass: (req) => req.url, // HTTP → Vite; tylko WS upgrade jest proxy'owane
+      },
+    },
   },
   define: {
-    // Umożliwia nadpisanie URL serwera przez env przy buildzie produkcyjnym
+    // W dev proxy działa na tym samym porcie co Vite (:3000).
+    // W produkcji ustaw VITE_SERVER_URL na właściwy host.
     "import.meta.env.VITE_SERVER_URL": JSON.stringify(
-      process.env.VITE_SERVER_URL ?? "ws://localhost:2567"
+      process.env.VITE_SERVER_URL ?? "ws://localhost:3000"
     ),
   },
 });
@@ -243,4 +257,6 @@ Szkielet HTML. Warstwy UI (spec-06) uzupełnią `#ui-root`. Phaser (spec-08) zaj
 
 - `shared/` jest workspace — importuj jako `import { Tile } from "@shared/types"` po skonfigurowaniu aliasów.
 - Phaser canvas jest tworzony przez `GameScene` (spec-08) i automatycznie dołączany do `#game-container`.
-- Przy `vite dev` client działa na porcie 3000, serwer Colyseus na 2567.
+- W trybie dev Vite (:3000) proxy'uje `/matchmake` i WebSocket do Colyseus (:2567) — użytkownik widzi jeden port `:3000`. HMR działa na `:3001` żeby nie kolidowało z WS proxy.
+- W produkcji `npm run build --workspace=client`, a Express sam serwuje `client/dist` na `:2567`.
+- `VITE_SERVER_URL` domyślnie `ws://localhost:3000` (dev). Przy budowaniu produkcyjnym przekaż `VITE_SERVER_URL=ws://twoja-domena.com`.

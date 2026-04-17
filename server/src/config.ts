@@ -1,6 +1,6 @@
 export const CONFIG = {
   GRAVITY:                1800,
-  JUMP_VELOCITY:          -620,
+  JUMP_VELOCITY:          -800,
   MOVE_SPEED:             220,
   PLAYER_W:               24,
   PLAYER_H:               40,

@@ -435,7 +435,7 @@ export class GameScene extends Phaser.Scene {
     dt:    number,
   ): void {
     const GRAVITY        = 1800;
-    const JUMP_VELOCITY  = -620;
+    const JUMP_VELOCITY  = -800;
     const MOVE_SPEED     = 220;
 
     const vx = left ? -MOVE_SPEED : right ? MOVE_SPEED : 0;

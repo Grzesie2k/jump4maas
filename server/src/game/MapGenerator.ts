@@ -95,7 +95,7 @@ export class MapGenerator {
         const numPlatforms = rng() < 0.5 ? 1 : 2;
         for (let p = 0; p < numPlatforms; p++) {
           const platLen     = Math.floor(rng() * 5) + 3;            // 3..7
-          const heightAbove = Math.floor(rng() * 3) + 3;             // 3..5 tiles above row 16
+          const heightAbove = Math.floor(rng() * 2) + 3;             // 3..4 tiles above row 16 (reachable with JUMP_VELOCITY=-800)
           const platRow     = 16 - heightAbove;                       // e.g. row 13 if heightAbove=3
           let platCol       = segStart + Math.floor(rng() * Math.max(1, segLen - platLen));
           // Clamp to segment bounds

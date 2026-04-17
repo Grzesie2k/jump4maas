@@ -122,7 +122,7 @@ if segLen > 6 AND rng() < 0.60:
   numPlatforms = (rng() < 0.5) ? 1 : 2
   for each platform:
     platLen = floor(rng() * 5) + 3   // 3..7
-    heightAbove = floor(rng() * 3) + 3  // 3..5 kafelki powyżej rzędu 16
+    heightAbove = floor(rng() * 2) + 3  // 3..4 kafelki powyżej rzędu 16 (row 12-13, osiągalne z JUMP_VELOCITY=-800)
     platRow = 16 - heightAbove          // np. rząd 13 jeśli heightAbove=3
     platCol = segStart + floor(rng() * max(1, segLen - platLen))
     platCol = clamp(platCol, segStart, segStart + segLen - platLen)
