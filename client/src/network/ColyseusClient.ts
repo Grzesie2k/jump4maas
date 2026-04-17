@@ -6,7 +6,9 @@ import type {
   RaceResultMessage,
 } from "@shared/types";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? "ws://localhost:2567";
+const { protocol, host } = window.location;
+const SERVER_URL: string = import.meta.env.VITE_SERVER_URL ??
+  `${protocol.replace("http", "ws")}//${host}`;
 
 class ColyseusClientImpl {
   private client: Client      = new Client(SERVER_URL);

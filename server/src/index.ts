@@ -6,7 +6,7 @@ import { join } from "path";
 import { GameRoom } from "./rooms/GameRoom";
 
 const app = express();
-app.use(express.static(join(__dirname, "../../client/dist")));
+app.use(express.static("../../client/dist"));
 
 const httpServer = createServer(app);
 const gameServer = new Server({
@@ -15,4 +15,4 @@ const gameServer = new Server({
 
 gameServer.define("game_room", GameRoom).enableRealtimeListing();
 
-httpServer.listen(2567, () => console.log("Server running on :2567"));
+httpServer.listen(2567, '0.0.0.0',() => console.log("Server running on :2567"));
