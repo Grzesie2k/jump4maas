@@ -1,10 +1,11 @@
 import type { IPlayerState } from "@shared/types";
 
 export class PlayerSprite {
-  sprite:    Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
-  head!:     Phaser.GameObjects.Arc;
-  nameLabel: Phaser.GameObjects.Text;
-  ghostMode: boolean = false;
+  sprite:         Phaser.GameObjects.Container;
+  nameLabel:      Phaser.GameObjects.Text;
+  ghostMode:      boolean = false;
+  private lastState: Partial<IPlayerState> = {};
+  private animationTime: number = 0;
 
   constructor(
     private scene:  Phaser.Scene,
@@ -13,14 +14,15 @@ export class PlayerSprite {
     const hasSheet = scene.textures.exists("player");
 
     if (hasSheet) {
-      this.sprite = scene.add.sprite(player.x, player.y, "player");
+      // Use sprite sheet if available
+      this.sprite = scene.add.container(player.x, player.y);
+      const spriteObj = scene.add.sprite(0, 0, "player");
+      this.sprite.add(spriteObj);
       this.createAnimations(scene);
     } else {
-      // Placeholder: kolorowy prostokąt z kółkiem
-      this.sprite = scene.add.rectangle(player.x, player.y, 24, 40, 0xffffff)
-        .setTint(Phaser.Display.Color.HexStringToColor(player.color).color);
-      this.head = scene.add.arc(player.x, player.y - 28, 12, 0, 360, false,
-        Phaser.Display.Color.HexStringToColor(player.color).color);
+      // Create stick figure container
+      this.sprite = scene.add.container(player.x, player.y);
+      this.drawStickFigure(player.color);
     }
 
     this.nameLabel = scene.add.text(player.x, player.y - 50, player.name, {
@@ -30,6 +32,43 @@ export class PlayerSprite {
       stroke:          "#000",
       strokeThickness: 2,
     }).setOrigin(0.5, 1);
+  }
+
+  private drawStickFigure(color: string): void {
+    const colorValue = Phaser.Display.Color.HexStringToColor(color).color;
+    
+    // Head (circle)
+    const head = this.scene.add.circle(0, -14, 6, colorValue);
+    this.sprite.add(head);
+    
+    // Body (line)
+    const body = this.scene.add.line(0, 0, 0, -8, 0, 4, colorValue);
+    (body as any).setLineWidth(2);
+    this.sprite.add(body);
+    
+    // Left arm
+    const leftArm = this.scene.add.line(0, 0, -3, -4, -8, 0, colorValue);
+    (leftArm as any).setLineWidth(2);
+    leftArm.setName("leftArm");
+    this.sprite.add(leftArm);
+    
+    // Right arm
+    const rightArm = this.scene.add.line(0, 0, 3, -4, 8, 0, colorValue);
+    (rightArm as any).setLineWidth(2);
+    rightArm.setName("rightArm");
+    this.sprite.add(rightArm);
+    
+    // Left leg
+    const leftLeg = this.scene.add.line(0, 0, -3, 4, -6, 12, colorValue);
+    (leftLeg as any).setLineWidth(2);
+    leftLeg.setName("leftLeg");
+    this.sprite.add(leftLeg);
+    
+    // Right leg
+    const rightLeg = this.scene.add.line(0, 0, 3, 4, 6, 12, colorValue);
+    (rightLeg as any).setLineWidth(2);
+    rightLeg.setName("rightLeg");
+    this.sprite.add(rightLeg);
   }
 
   private createAnimations(scene: Phaser.Scene): void {
@@ -45,30 +84,73 @@ export class PlayerSprite {
 
   update(x: number, y: number, state: IPlayerState): void {
     this.sprite.setPosition(x, y);
-    if (this.head) this.head.setPosition(x, y - 28);
     this.nameLabel.setPosition(x, y - 44);
 
-    if (this.sprite instanceof Phaser.GameObjects.Sprite) {
-      const s = this.sprite;
-      s.setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
-      s.setFlipX(!state.facingRight);
+    // Check if it's a sprite sheet
+    if (this.sprite.list.length > 0 && this.sprite.list[0] instanceof Phaser.GameObjects.Sprite) {
+      const spriteObj = this.sprite.list[0] as Phaser.GameObjects.Sprite;
+      spriteObj.setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
+      spriteObj.setFlipX(!state.facingRight);
 
       if (state.eliminated) {
-        s.play(`player_${state.id}_die`, true);
+        spriteObj.play(`player_${state.id}_die`, true);
       } else if (!state.grounded) {
-        s.play(state.vy < 0 ? `player_${state.id}_jump` : `player_${state.id}_fall`, true);
+        spriteObj.play(state.vy < 0 ? `player_${state.id}_jump` : `player_${state.id}_fall`, true);
       } else if (state.vx !== 0) {
-        s.play(`player_${state.id}_run`, true);
+        spriteObj.play(`player_${state.id}_run`, true);
       } else {
-        s.play(`player_${state.id}_idle`, true);
+        spriteObj.play(`player_${state.id}_idle`, true);
       }
     } else {
-      (this.sprite as Phaser.GameObjects.Rectangle)
-        .setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
+      // Stick figure animation
+      this.animationTime += this.scene.game.loop.delta;
+      this.updateStickFigureAnimation(state);
     }
 
     if (this.ghostMode) {
       this.sprite.setAlpha(0.35);
+    }
+  }
+
+  private updateStickFigureAnimation(state: IPlayerState): void {
+    const leftArm = this.sprite.getByName("leftArm") as Phaser.GameObjects.Line;
+    const rightArm = this.sprite.getByName("rightArm") as Phaser.GameObjects.Line;
+    const leftLeg = this.sprite.getByName("leftLeg") as Phaser.GameObjects.Line;
+    const rightLeg = this.sprite.getByName("rightLeg") as Phaser.GameObjects.Line;
+
+    if (!leftArm || !rightArm || !leftLeg || !rightLeg) return;
+
+    const flip = state.facingRight ? 1 : -1;
+
+    if (!state.grounded) {
+      // Jumping/falling: arms and legs spread out
+      leftArm.setTo(-3, -4, -10, -4);
+      rightArm.setTo(3, -4, 10, -4);
+      leftLeg.setTo(-3, 4, -6, 14);
+      rightLeg.setTo(3, 4, 6, 14);
+    } else if (state.vx !== 0) {
+      // Running: animate legs and arms
+      const runCycle = (this.animationTime % 400) / 400; // Cycle every 400ms
+      const legSwing = Math.sin(runCycle * Math.PI * 2) * 8;
+      const armSwing = Math.sin(runCycle * Math.PI * 2) * 6;
+
+      leftArm.setTo(-3, -4, (-8 + armSwing) * flip, (-2 + armSwing * 0.5) * flip);
+      rightArm.setTo(3, -4, (8 - armSwing) * flip, (-2 - armSwing * 0.5) * flip);
+      leftLeg.setTo(-3, 4, (-6 + legSwing) * flip, 12);
+      rightLeg.setTo(3, 4, (6 - legSwing) * flip, 12);
+    } else {
+      // Idle: resting position
+      leftArm.setTo(-3, -4, -8, 0);
+      rightArm.setTo(3, -4, 8, 0);
+      leftLeg.setTo(-3, 4, -6, 12);
+      rightLeg.setTo(3, 4, 6, 12);
+    }
+
+    // Mirror for left-facing
+    if (!state.facingRight) {
+      this.sprite.setScale(-1, 1);
+    } else {
+      this.sprite.setScale(1, 1);
     }
   }
 
@@ -77,7 +159,7 @@ export class PlayerSprite {
     this.sprite.setAlpha(0.35);
     // Zanikanie
     this.scene.tweens.add({
-      targets:  [this.sprite, this.head, this.nameLabel].filter(Boolean),
+      targets:  [this.sprite, this.nameLabel],
       alpha:    0.35,
       duration: 500,
     });
@@ -85,7 +167,6 @@ export class PlayerSprite {
 
   destroy(): void {
     this.sprite.destroy();
-    this.head?.destroy();
     this.nameLabel.destroy();
   }
 }
