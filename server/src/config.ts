@@ -8,7 +8,7 @@ export const CONFIG = {
   ENEMY_W:                24,
   ENEMY_H:                24,
   MAX_PLAYERS:            5,
-  STARTING_LIVES:         3,
+  STARTING_LIVES:         10,
   CHECKPOINT_INTERVAL_MS: 2000,
   TILE_SIZE:              32,
   LEVEL_WIDTH_TILES:      280,

@@ -5,13 +5,13 @@ import { PlayerSprite }    from "../game/PlayerSprite";
 import { Interpolator }    from "../game/Interpolator";
 import { HUD }             from "../game/HUD";
 import type { MapLayoutMessage, IGameState, IPlayerState, RaceResultMessage } from "@shared/types";
+import { Tile } from "@shared/types";
 
 const LEVEL_W = 280 * 32;
 const LEVEL_H = 18 * 32;
 
 export class GameScene extends Phaser.Scene {
   private playerSprites = new Map<string, PlayerSprite>();
-  private readonly playerBodies  = new Map<string, Phaser.GameObjects.Container>();
   private enemySprites  = new Map<number, Phaser.GameObjects.Container>();
   private interpolators = new Map<string, Interpolator>();
   private hud!:          HUD;
@@ -45,7 +45,6 @@ export class GameScene extends Phaser.Scene {
 
     // Reset per-race state (Phaser reuses the instance on scene.start)
     this.playerSprites.clear();
-    this.playerBodies.clear();
     this.enemySprites.clear();
     this.interpolators.clear();
     this.localX          = 0;
@@ -243,35 +242,98 @@ export class GameScene extends Phaser.Scene {
 
   // ── Predykcja lokalna ─────────────────────────────────────────────────────
 
+  // tiles are always TS×TS squares, so width==height==ts
+  private static aabbOverlap(
+    px: number, py: number, pw: number, ph: number,
+    tx: number, ty: number, ts: number,
+  ): { overlapX: number; overlapY: number } | null {
+    const ox = (px + pw / 2) - (tx + ts / 2);
+    const oy = (py + ph / 2) - (ty + ts / 2);
+    const hw = (pw + ts) / 2;
+    const hh = (ph + ts) / 2;
+    if (Math.abs(ox) >= hw || Math.abs(oy) >= hh) return null;
+    return { overlapX: hw - Math.abs(ox), overlapY: hh - Math.abs(oy) };
+  }
+
+  private resolveTiles(
+    newX: number, newY: number, prevY: number, inVy: number,
+  ): { x: number; y: number; vy: number; grounded: boolean } {
+    const TS = 32, TW = 280, TH = 18, PW = 24, PH = 40;
+    const tiles  = this.mapLayout.tiles;
+    const colMin = Math.max(0,      Math.floor(newX / TS) - 1);
+    const colMax = Math.min(TW - 1, Math.floor((newX + PW) / TS) + 1);
+    const rowMin = Math.max(0,      Math.floor(newY / TS) - 1);
+    const rowMax = Math.min(TH - 1, Math.floor((newY + PH) / TS) + 1);
+
+    const s = { x: newX, y: newY, vy: inVy, grounded: false };
+    for (let row = rowMin; row <= rowMax; row++) {
+      for (let col = colMin; col <= colMax; col++) {
+        const tile = tiles[row * TW + col];
+        if (tile) this.resolveOneTile(s, prevY, col, row, tile);
+      }
+    }
+    return s;
+  }
+
+  private resolveOneTile(
+    s: { x: number; y: number; vy: number; grounded: boolean },
+    prevY: number, col: number, row: number, tile: number,
+  ): void {
+    const PW = 24, PH = 40, TS = 32;
+    if (tile === Tile.Platform) {
+      const tileTop = row * TS;
+      if (s.vy > 0 && prevY + PH <= tileTop + 2) {
+        const ov = GameScene.aabbOverlap(s.x, s.y, PW, PH, col * TS, tileTop, TS);
+        if (ov) { s.y = tileTop - PH; s.vy = 0; s.grounded = true; }
+      }
+    } else if (tile === Tile.Ground) {
+      const ov = GameScene.aabbOverlap(s.x, s.y, PW, PH, col * TS, row * TS, TS);
+      if (ov) this.resolveGround(s, ov, col, row);
+    }
+  }
+
+  private resolveGround(
+    s:  { x: number; y: number; vy: number; grounded: boolean },
+    ov: { overlapX: number; overlapY: number },
+    col: number, row: number,
+  ): void {
+    const PW = 24, PH = 40, TS = 32;
+    if (ov.overlapX < ov.overlapY) {
+      const push = (s.x + PW / 2) < (col * TS + TS / 2) ? -ov.overlapX : ov.overlapX;
+      s.x += push;
+    } else if ((s.y + PH / 2) < (row * TS + TS / 2)) {
+      s.y -= ov.overlapY; s.vy = 0; s.grounded = true;
+    } else {
+      s.y += ov.overlapY; s.vy = 0;
+    }
+  }
+
   private applyLocalPrediction(
     left:  boolean,
     right: boolean,
     jump:  boolean,
     dt:    number,
   ): void {
-    const GRAVITY       = 1800;
-    const JUMP_VELOCITY = -800;
-    const MOVE_SPEED    = 220;
+    const GRAVITY = 1800, JUMP_VELOCITY = -800, MOVE_SPEED = 220;
 
     const vx = left ? -MOVE_SPEED : right ? MOVE_SPEED : 0;
     this.localVy += GRAVITY * dt;
     if (jump && this.localGrounded) {
-      this.localVy       = JUMP_VELOCITY;
+      this.localVy = JUMP_VELOCITY;
       this.localGrounded = false;
     }
 
-    this.localX += vx * dt;
-    this.localY += this.localVy * dt;
+    const resolved = this.resolveTiles(
+      this.localX + vx * dt,
+      this.localY + this.localVy * dt,
+      this.localY,
+      this.localVy,
+    );
 
-    // Prosta kolizja z podłogą (aproksymacja — serwer jest autorytatywny)
-    const floorY = (18 - 2) * 32 - 40;
-    if (this.localY > floorY) {
-      this.localY        = floorY;
-      this.localVy       = 0;
-      this.localGrounded = true;
-    }
-
-    this.localX = Phaser.Math.Clamp(this.localX, 0, LEVEL_W - 24);
+    this.localGrounded = resolved.grounded;
+    this.localVy       = resolved.vy;
+    this.localX        = Phaser.Math.Clamp(resolved.x, 0, LEVEL_W - 24);
+    this.localY        = resolved.y;
   }
 
   // ── Wyniki ────────────────────────────────────────────────────────────────

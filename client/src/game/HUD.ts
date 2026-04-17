@@ -1,8 +1,7 @@
 import type { IGameState } from "@shared/types";
 import { ColyseusClient }  from "../network/ColyseusClient";
 
-const HEART_FULL  = "♥";
-const HEART_EMPTY = "♡";
+const HEART_FULL = "♥";
 
 export class HUD {
   private topBar:     Phaser.GameObjects.Rectangle;
@@ -66,9 +65,7 @@ export class HUD {
 
     // Hearts
     if (myState) {
-      const hearts = Array.from({ length: 3 }, (_, i) =>
-        i < myState.lives ? HEART_FULL : HEART_EMPTY
-      ).join(" ");
+      const hearts = `${HEART_FULL} ×${myState.lives}`;
       this.heartsText.setText(hearts);
       this.nameText.setText(myState.name);
     }
