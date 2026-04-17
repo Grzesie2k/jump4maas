@@ -56,7 +56,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
     }
 
     // If race is in progress and too few players — end the race
-    if (this.state.phase === "racing" && this.state.players.size < 2) {
+    if (this.state.phase === "racing" && this.state.players.size < 1) {
       this.endRace();
     }
   }
@@ -78,7 +78,7 @@ export class GameRoom extends Room<GameState> implements IGameRoomCallbacks {
   private handleStartRace(client: Client) {
     if (client.sessionId !== this.hostId) return;
     if (this.state.phase !== "waiting") return;
-    if (this.state.players.size < 2) return;
+    if (this.state.players.size < 1) return;
     this.startCountdown();
   }
 

@@ -162,9 +162,9 @@ export class LobbyUI {
 
     if (isHost) {
       footer.style.display = "block";
-      const canStart       = state.players.size >= 2 && state.phase === "waiting";
+      const canStart       = state.players.size >= 1 && state.phase === "waiting";
       startBtn.disabled    = !canStart;
-      hint.textContent     = canStart ? "" : "Need 2+ players";
+      hint.textContent     = "";
     } else {
       footer.style.display = "none";
     }
