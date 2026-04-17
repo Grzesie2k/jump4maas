@@ -51,7 +51,7 @@ Nie wymaga żadnej logiki gry — tylko konfiguracja toolchaina.
   "name": "@jump4maas/server",
   "version": "1.0.0",
   "scripts": {
-    "dev": "ts-node-dev --respawn src/index.ts",
+    "dev": "ts-node-dev --require tsconfig-paths/register --respawn src/index.ts",
     "build": "tsc"
   },
   "dependencies": {
@@ -63,10 +63,13 @@ Nie wymaga żadnej logiki gry — tylko konfiguracja toolchaina.
     "@types/express": "^4.17.0",
     "@types/node": "^20.0.0",
     "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.0.0"
   }
 }
 ```
+
+> `tsconfig-paths` jest wymagane żeby `ts-node-dev` rozwiązywał alias `@shared/*` w runtime — TypeScript `paths` działają tylko w kompilacji, nie w Node.js.
 
 ## `client/package.json`
 
@@ -201,6 +204,7 @@ Szkielet HTML. Warstwy UI (spec-06) uzupełnią `#ui-root`. Phaser (spec-08) zaj
       width: 800px;
       height: 576px;
       pointer-events: none;   /* domyślnie nie blokuje kliknięć canvasa */
+      z-index: 1;             /* Phaser appends canvas AFTER #ui-root w DOM — bez z-index canvas by przykrywał lobby */
     }
 
     #ui-root .screen {

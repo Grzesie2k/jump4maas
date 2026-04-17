@@ -57,21 +57,15 @@ export class BootScene extends Phaser.Scene {
   constructor() { super("BootScene"); }
 
   preload(): void {
-    // Próba załadowania prawdziwych assetów (mogą nie istnieć przy pierwszym uruchomieniu)
-    this.load.on("loaderror", (file: { key: string }) => {
-      console.warn(`Asset not found: ${file.key} — placeholder will be used`);
-    });
-
-    this.load.image("tiles",   "assets/tiles/tileset.png");
-    this.load.spritesheet("player", "assets/player/player.png",
-      { frameWidth: 48, frameHeight: 48 });
-    this.load.spritesheet("enemy",  "assets/enemy/enemy.png",
-      { frameWidth: 32, frameHeight: 32 });
+    // Assety są opcjonalne — MapRenderer i PlayerSprite mają fallbacki do prostokątów.
+    // Gdy prawdziwe pliki istnieją, dodaj tu:
+    //   this.load.image("tiles", "assets/tiles/tileset.png");
+    //   this.load.spritesheet("player", "assets/player/player.png", { frameWidth: 48, frameHeight: 48 });
+    //   this.load.spritesheet("enemy",  "assets/enemy/enemy.png",   { frameWidth: 32, frameHeight: 32 });
   }
 
   create(): void {
     // Nie startuj gry automatycznie — GameScene jest uruchamiana przez ColyseusClient.onRaceStart
-    // BootScene od razu idzie uśpiony; czekamy na event z LobbyUI
   }
 }
 ```
@@ -168,35 +162,44 @@ Jeden sprite per gracz (lokalny + zdalny).
 import type { IPlayerState } from "@shared/types";
 
 export class PlayerSprite {
-  sprite:    Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
-  head:      Phaser.GameObjects.Arc;
+  sprite:    Phaser.GameObjects.Graphics | Phaser.GameObjects.Sprite;
   nameLabel: Phaser.GameObjects.Text;
   ghostMode: boolean = false;
+
+  private color: number;
 
   constructor(
     private scene:  Phaser.Scene,
     private player: IPlayerState,
   ) {
+    this.color = Phaser.Display.Color.HexStringToColor(player.color).color;
     const hasSheet = scene.textures.exists("player");
 
     if (hasSheet) {
       this.sprite = scene.add.sprite(player.x, player.y, "player");
       this.createAnimations(scene);
     } else {
-      // Placeholder: kolorowy prostokąt z kółkiem
-      this.sprite = scene.add.rectangle(player.x, player.y, 24, 40, 0xffffff)
-        .setTint(Phaser.Display.Color.HexStringToColor(player.color).color);
-      this.head   = scene.add.arc(player.x, player.y - 28, 12, 0, 360, false,
-        Phaser.Display.Color.HexStringToColor(player.color).color);
+      // Placeholder: Graphics czyszczony każdą klatkę — unika artefaktów Arc/Rectangle.
+      // Rysowany względem origin (0,0), pozycja przez setPosition().
+      this.sprite = scene.add.graphics();
+      this.drawPlaceholder(this.sprite as Phaser.GameObjects.Graphics, player.x, player.y);
     }
 
     this.nameLabel = scene.add.text(player.x, player.y - 50, player.name, {
-      fontSize:   "11px",
-      color:      player.color,
-      fontFamily: "monospace",
-      stroke:     "#000",
+      fontSize:        "11px",
+      color:           player.color,
+      fontFamily:      "monospace",
+      stroke:          "#000",
       strokeThickness: 2,
     }).setOrigin(0.5, 1);
+  }
+
+  private drawPlaceholder(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.clear();
+    g.fillStyle(this.color, this.ghostMode ? 0.35 : 1);
+    g.fillRect(-12, -20, 24, 40);  // ciało względem origin
+    g.fillCircle(0, -32, 12);      // głowa względem origin
+    g.setPosition(x, y);
   }
 
   private createAnimations(scene: Phaser.Scene): void {
@@ -211,48 +214,44 @@ export class PlayerSprite {
   }
 
   update(x: number, y: number, state: IPlayerState): void {
-    this.sprite.setPosition(x, y);
-    if (this.head) this.head.setPosition(x, y - 28);
-    this.nameLabel.setPosition(x, y - 44);
+    this.nameLabel.setPosition(x, y - 50);
 
     if (this.sprite instanceof Phaser.GameObjects.Sprite) {
-      const s = this.sprite;
-      s.setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
-      s.setFlipX(!state.facingRight);
+      this.sprite.setPosition(x, y);
+      this.sprite.setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
+      this.sprite.setFlipX(!state.facingRight);
 
       if (state.eliminated) {
-        s.play(`player_${state.id}_die`, true);
+        this.sprite.play(`player_${state.id}_die`, true);
       } else if (!state.grounded) {
-        s.play(state.vy < 0 ? `player_${state.id}_jump` : `player_${state.id}_fall`, true);
+        this.sprite.play(state.vy < 0 ? `player_${state.id}_jump` : `player_${state.id}_fall`, true);
       } else if (state.vx !== 0) {
-        s.play(`player_${state.id}_run`, true);
+        this.sprite.play(`player_${state.id}_run`, true);
       } else {
-        s.play(`player_${state.id}_idle`, true);
+        this.sprite.play(`player_${state.id}_idle`, true);
       }
-    } else {
-      (this.sprite as Phaser.GameObjects.Rectangle)
-        .setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
-    }
 
-    if (this.ghostMode) {
-      this.sprite.setAlpha(0.35);
+      if (this.ghostMode) this.sprite.setAlpha(0.35);
+    } else {
+      this.color = Phaser.Display.Color.HexStringToColor(state.color).color;
+      this.drawPlaceholder(this.sprite as Phaser.GameObjects.Graphics, x, y);
     }
   }
 
   setGhostMode(): void {
     this.ghostMode = true;
-    this.sprite.setAlpha(0.35);
-    // Zanikanie
+    if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+      this.sprite.setAlpha(0.35);
+    }
     this.scene.tweens.add({
-      targets: [this.sprite, this.head, this.nameLabel].filter(Boolean),
-      alpha:   0.35,
+      targets:  [this.nameLabel],
+      alpha:    0.35,
       duration: 500,
     });
   }
 
   destroy(): void {
     this.sprite.destroy();
-    this.head?.destroy();
     this.nameLabel.destroy();
   }
 }
@@ -378,17 +377,22 @@ export class GameScene extends Phaser.Scene {
   private syncState(state: IGameState): void {
     state.players.forEach((player, id) => {
       if (id === this.myId) {
+        // Utwórz sprite lokalnego gracza przy pierwszym state update
+        if (!this.playerSprites.has(id)) {
+          this.localX = player.x;
+          this.localY = player.y;
+          this.playerSprites.set(id, new PlayerSprite(this, player));
+        }
         // Korekta predykcji lokalnej
         const diffX = Math.abs(player.x - this.localX);
         const diffY = Math.abs(player.y - this.localY);
         if (diffX > 16 || diffY > 16) {
-          // Snap z krótkim lerp (realizowany w update przez zbieżność)
           this.localX = Phaser.Math.Linear(this.localX, player.x, 0.3);
           this.localY = Phaser.Math.Linear(this.localY, player.y, 0.3);
         }
         const mySprite = this.playerSprites.get(id);
         mySprite?.update(this.localX, this.localY, player);
-        this.cameras.main.startFollow(mySprite!.sprite, true, 0.1, 0);
+        if (mySprite) this.cameras.main.startFollow(mySprite.sprite, true, 0.1, 0);
         return;
       }
 
