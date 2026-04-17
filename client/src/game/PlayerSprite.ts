@@ -15,13 +15,13 @@ export class PlayerSprite {
 
     if (hasSheet) {
       // Use sprite sheet if available
-      this.sprite = scene.add.container(player.x, player.y);
+      this.sprite = scene.add.container(player.x + 12, player.y + 20);
       const spriteObj = scene.add.sprite(0, 0, "player");
       this.sprite.add(spriteObj);
       this.createAnimations(scene);
     } else {
       // Create stick figure container
-      this.sprite = scene.add.container(player.x, player.y);
+      this.sprite = scene.add.container(player.x + 12, player.y + 20);
       this.drawStickFigure(player.color);
     }
 
@@ -61,13 +61,13 @@ export class PlayerSprite {
     this.sprite.add(rightArm);
 
     // Left leg
-    const leftLeg = this.scene.add.line(0, 0, -3, 4, -6, 12, colorValue);
+    const leftLeg = this.scene.add.line(0, 0, -3, 4, -6, 20, colorValue);
     (leftLeg as any).setLineWidth(2);
     leftLeg.setName("leftLeg");
     this.sprite.add(leftLeg);
 
     // Right leg
-    const rightLeg = this.scene.add.line(0, 0, 3, 4, 6, 12, colorValue);
+    const rightLeg = this.scene.add.line(0, 0, 3, 4, 6, 20, colorValue);
     (rightLeg as any).setLineWidth(2);
     rightLeg.setName("rightLeg");
     this.sprite.add(rightLeg);
@@ -116,8 +116,8 @@ export class PlayerSprite {
   }
 
   update(x: number, y: number, state: IPlayerState): void {
-    this.sprite.setPosition(x, y);
-    this.nameLabel.setPosition(x, y - 44);
+    this.sprite.setPosition(x + 12, y + 20);
+    this.nameLabel.setPosition(x + 12, y - 10);
 
     // Check if it's a sprite sheet
     if (
@@ -171,11 +171,11 @@ export class PlayerSprite {
       // Jumping/falling: arms and legs spread out
       leftArm.setTo(-3, -4, -10, -4);
       rightArm.setTo(3, -4, 10, -4);
-      leftLeg.setTo(-3, 4, -6, 14);
-      rightLeg.setTo(3, 4, 6, 14);
+      leftLeg.setTo(-3, 4, -6, 22);
+      rightLeg.setTo(3, 4, 6, 22);
     } else if (state.vx !== 0) {
       // Running: animate legs and arms
-      const runCycle = (this.animationTime % 400) / 400; // Cycle every 400ms
+      const runCycle = (this.animationTime % 400) / 400;
       const legSwing = Math.sin(runCycle * Math.PI * 2) * 8;
       const armSwing = Math.sin(runCycle * Math.PI * 2) * 6;
 
@@ -191,14 +191,14 @@ export class PlayerSprite {
         (8 - armSwing) * flip,
         (-2 - armSwing * 0.5) * flip,
       );
-      leftLeg.setTo(-3, 4, (-6 + legSwing) * flip, 12);
-      rightLeg.setTo(3, 4, (6 - legSwing) * flip, 12);
+      leftLeg.setTo(-3, 4, (-6 + legSwing) * flip, 20);
+      rightLeg.setTo(3, 4, (6 - legSwing) * flip, 20);
     } else {
       // Idle: resting position
       leftArm.setTo(-3, -4, -8, 0);
       rightArm.setTo(3, -4, 8, 0);
-      leftLeg.setTo(-3, 4, -6, 12);
-      rightLeg.setTo(3, 4, 6, 12);
+      leftLeg.setTo(-3, 4, -6, 20);
+      rightLeg.setTo(3, 4, 6, 20);
     }
 
     // Mirror for left-facing

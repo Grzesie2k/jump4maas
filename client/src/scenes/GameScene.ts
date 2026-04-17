@@ -11,7 +11,7 @@ const LEVEL_H = 18 * 32;
 
 export class GameScene extends Phaser.Scene {
   private playerSprites = new Map<string, PlayerSprite>();
-  private playerBodies  = new Map<string, Phaser.Physics.Arcade.Body>();
+  private playerBodies  = new Map<string, Phaser.GameObjects.Container>();
   private enemySprites  = new Map<number, Phaser.GameObjects.Rectangle>();
   private interpolators = new Map<string, Interpolator>();
   private hud!:          HUD;
@@ -134,12 +134,12 @@ export class GameScene extends Phaser.Scene {
           this.playerSprites.set(id, sprite);
           
           // Create physics body
-          const body = this.physics.add.existing(sprite.sprite, false) as unknown as Phaser.Physics.Arcade.Sprite;
-          const physicsBody = body.body as Phaser.Physics.Arcade.Body;
+          this.physics.add.existing(sprite.sprite, false);
+          const physicsBody = (sprite.sprite as unknown as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body;
           physicsBody.setSize(24, 40);
           physicsBody.setDrag(0);
-          physicsBody.setGravityY(0); // Manual gravity in applyLocalPrediction
-          this.playerBodies.set(id, physicsBody);
+          physicsBody.setGravityY(0);
+          this.playerBodies.set(id, sprite.sprite);
           
           // Set up collisions
           this.physics.add.collider(sprite.sprite, this.groundGroup, () => {
@@ -239,10 +239,10 @@ export class GameScene extends Phaser.Scene {
     // Clamp to level bounds
     this.localX = Phaser.Math.Clamp(this.localX, 0, LEVEL_W - 24);
     
-    // Update physics body position
+    // Update physics body position (container sits at hitbox centre)
     const physicsBody = this.playerBodies.get(this.myId);
     if (physicsBody) {
-      physicsBody.setPosition(this.localX, this.localY);
+      physicsBody.setPosition(this.localX + 12, this.localY + 20);
     }
   }
 
