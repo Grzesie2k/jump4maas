@@ -120,6 +120,11 @@ export class GameScene extends Phaser.Scene {
 
     state.players.forEach((player, id) => {
       if (id === this.myId) {
+        if (!this.playerSprites.has(id)) {
+          this.localX = player.x;
+          this.localY = player.y;
+          this.playerSprites.set(id, new PlayerSprite(this, player));
+        }
         // Korekta predykcji lokalnej
         const diffX = Math.abs(player.x - this.localX);
         const diffY = Math.abs(player.y - this.localY);
