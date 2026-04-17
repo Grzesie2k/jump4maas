@@ -36,7 +36,7 @@ export class PhysicsEngine {
 
 ```
 GRAVITY       = 1800   px/s²
-JUMP_VELOCITY = -620   px/s
+JUMP_VELOCITY = -800   px/s
 MOVE_SPEED    = 220    px/s
 PLAYER_W      = 24     px  (hitbox szerokość)
 PLAYER_H      = 40     px  (hitbox wysokość)
@@ -102,7 +102,7 @@ Użyj funkcji `resolveCollisions(player, newX, newY, tiles)` → `{ x, y, vy, gr
 
    a) Jeśli typ == Platform:
       - Tylko kolizja od góry
-      - Warunek: player.vy > 0 (opada) AND player.prevY + PLAYER_H <= tile.y + 1 (był nad platformą)
+      - Warunek: player.vy > 0 (opada) AND player.y + PLAYER_H <= tile.y + 2 (bottom gracza na początku ticka był nad platformą)
       - Jeśli prawda: popraw Y tak żeby gracz stał na platformie, ustaw vy=0, grounded=true
 
    b) Jeśli typ == Ground:
@@ -134,7 +134,6 @@ function aabbOverlap(
 ### 7. Zapis stanu
 
 ```typescript
-player.prevY    = player.y;    // przed nadpisaniem — do sprawdzenia platform
 player.x        = resolvedX;
 player.y        = resolvedY;
 player.vy       = resolvedVy;
@@ -232,4 +231,4 @@ Przy kolizji sprawdzaj kafelki których prostokąt `[col*TS, row*TS, TS, TS]` za
 - `PhysicsEngine.tick` jest wywoływany przez `GameRoom` co 50ms (20 Hz).
 - Wrogowie są **osobnym** systemem — `EnemyAI.tick` (spec-05) wywoływany oddzielnie po `PhysicsEngine.tick`.
 - Kolizja gracz–gracz **nie istnieje** — gracze przez siebie przechodzą.
-- `player.prevY` musi być zapisany **przed** aktualizacją `player.y` — używany w następnym ticku do sprawdzenia platform.
+- Warunek platformy one-way używa `player.y` (pozycja na początku bieżącego ticka, przed ruchem), nie `prevY`. Przy 20 Hz i grawitacji 1800 gracz może nie osiągnąć wystarczającej wysokości w symulacji dyskretnej — JUMP_VELOCITY=-800 zapewnia dosięgnięcie platform na row 12-13.

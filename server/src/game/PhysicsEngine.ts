@@ -69,10 +69,9 @@ function resolveCollisions(
       const tile = getTileAt(tiles, col, row);
 
       if (tile === Tile.Platform) {
-        // One-way: only collide from above
-        // Player must be falling and was above the platform top in previous frame
+        // One-way: only collide when falling and player's bottom was above tile top this tick start
         const tileTop = row * TS;
-        if (vy > 0 && player.prevY + PH <= tileTop + 1) {
+        if (vy > 0 && player.y + PH <= tileTop + 2) {
           const overlap = aabbOverlap(x, y, PW, PH, col * TS, tileTop, TS, TS);
           if (overlap) {
             // Push player up to stand on platform
