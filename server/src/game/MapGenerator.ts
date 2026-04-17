@@ -152,7 +152,7 @@ export class MapGenerator {
     // Step 7 — Decorations in rows 0-2
     for (const row of [0, 1, 2]) {
       for (let c = 0; c < W; c++) {
-        if (rng() < 0.04) {
+        if (rng() < 0.04 && c !== 271) {
           tiles[row * W + c] = Tile.Decoration;
         }
       }
