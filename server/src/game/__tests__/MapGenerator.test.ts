@@ -58,11 +58,12 @@ describe("MapGenerator", () => {
     });
 
     describe("finish zone (cols 270-279, rows 16-17)", () => {
-      it("is all Ground tiles", () => {
+      it("non-finish-line columns (270, 272-279) are Ground tiles in rows 16-17", () => {
         for (const seed of TEST_SEEDS) {
           const { tiles } = MapGenerator.generate(seed);
           for (const row of [16, 17]) {
             for (let col = 270; col <= 279; col++) {
+              if (col === 271) continue; // col 271 is the finish line — overwritten to Finish
               const idx = row * W + col;
               expect(tiles[idx]).toBe(Tile.Ground);
             }
@@ -76,11 +77,9 @@ describe("MapGenerator", () => {
         for (const seed of TEST_SEEDS) {
           const { tiles } = MapGenerator.generate(seed);
           for (let row = 0; row < H; row++) {
-            // Row 16 and 17 are Ground (placed after finish line step, but let's just check
-            // that column 271 has Finish tiles in rows not overridden by ground (rows 0-15)
-            if (row < 16) {
-              expect(tiles[row * W + 271]).toBe(Tile.Finish);
-            }
+            // Step 5 (finish line) runs after Step 2 (ground zones), so col 271
+            // has Tile.Finish in every row including rows 16-17.
+            expect(tiles[row * W + 271]).toBe(Tile.Finish);
           }
         }
       });
@@ -140,12 +139,11 @@ describe("MapGenerator", () => {
         for (const seed of TEST_SEEDS) {
           const { enemySpawns } = MapGenerator.generate(seed);
           for (const spawn of enemySpawns) {
+            // x is always positive (minimum col is 15: 15*32+16 = 496)
             expect(spawn.x).toBeGreaterThan(0);
-            // y can be negative for platform row 0 (row 0 * TS - ENEMY_H/2 = -12), but
-            // for ground row 16: 16 * TS - ENEMY_H/2 = 512 - 12 = 500 > 0.
-            // For platform rows the y may be negative for row=0.
-            // Spec says "all enemy spawns have positive x and y" — we check x is always positive.
-            expect(spawn.x).toBeGreaterThan(0);
+            // y is always positive: ground row 16 → 16*32 - 12 = 500;
+            // platform rows 11-13 → 340..404 (all > 0)
+            expect(spawn.y).toBeGreaterThan(0);
           }
         }
       });
@@ -233,12 +231,13 @@ describe("MapGenerator", () => {
       it("wherever row 16 is Ground, row 17 is also Ground in start and finish zones", () => {
         for (const seed of TEST_SEEDS) {
           const { tiles } = MapGenerator.generate(seed);
-          // Start zone
+          // Start zone (cols 0-9)
           for (let col = 0; col <= 9; col++) {
             expect(tiles[17 * W + col]).toBe(Tile.Ground);
           }
-          // Finish zone
+          // Finish zone — skip col 271 which is overwritten to Tile.Finish by step 5
           for (let col = 270; col <= 279; col++) {
+            if (col === 271) continue;
             expect(tiles[17 * W + col]).toBe(Tile.Ground);
           }
         }

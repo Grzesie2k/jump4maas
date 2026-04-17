@@ -347,9 +347,8 @@ describe("PhysicsEngine", () => {
         vy:    -400,              // moving up
         prevY: platTopY + 20,     // was below
       });
-      const startY = player.y;
-      const state  = makeState([player]);
-      const room   = mockRoom();
+      const state = makeState([player]);
+      const room  = mockRoom();
 
       PhysicsEngine.tick(state as never, tiles, 999999, DT, room);
 

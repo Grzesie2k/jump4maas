@@ -151,15 +151,20 @@ describe("EnemyAI", () => {
     it("does not move (reverses) when hitting a Ground wall tile", () => {
       if (skipIfMissing()) return;
 
-      const tiles = emptyTiles();
-      // Place a Ground tile directly ahead of the enemy
-      const enemyCol  = 10;
-      const enemyRow  = 8;
-      const wallCol   = enemyCol + 1;
-      tiles[enemyRow * W + wallCol] = Tile.Ground;
+      const tiles   = emptyTiles();
+      const wallCol = 11;
+      const wallRow = 8;
+      tiles[wallRow * W + wallCol] = Tile.Ground;
 
-      const enemyX = enemyCol * TS + TS / 2;
-      const enemyY = enemyRow * TS + TS / 2;
+      // Place enemy just to the left of the wall so that moving right by
+      // ENEMY_SPEED * dt puts its right edge into the wall tile.
+      // isWall: checkX = nextX + ENEMY_W/2; col = floor(checkX / TS)
+      // We want floor(checkX / TS) == wallCol (11), so checkX >= 11*32 = 352.
+      // nextX = enemyX + speed*dt; checkX = nextX + 12
+      // Enemy at x = wallCol * TS - ENEMY_W / 2 - 2 = 352 - 12 - 2 = 338
+      // nextX = 338 + 60*0.05 = 341; checkX = 341 + 12 = 353; floor(353/32) = 11 ✓
+      const enemyX = wallCol * TS - CONFIG.ENEMY_W / 2 - 2;
+      const enemyY = wallRow * TS + TS / 2;
 
       const enemy   = makeEnemy({
         x:           enemyX,
