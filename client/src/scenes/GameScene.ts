@@ -11,7 +11,7 @@ const LEVEL_H = 18 * 32;
 
 export class GameScene extends Phaser.Scene {
   private playerSprites = new Map<string, PlayerSprite>();
-  private enemySprites  = new Map<number, Phaser.GameObjects.Rectangle>();
+  private enemySprites  = new Map<number, Phaser.GameObjects.Container>();
   private interpolators = new Map<string, Interpolator>();
   private hud!:          HUD;
   private mapLayout!:    MapLayoutMessage;
@@ -173,16 +173,30 @@ export class GameScene extends Phaser.Scene {
 
     // Wrogowie
     state.enemies.forEach((enemy) => {
-      let sprite = this.enemySprites.get(enemy.id);
-      if (!sprite) {
-        sprite = this.add.rectangle(enemy.x, enemy.y, 28, 28, 0xCC0000)
-          .setDepth(1) as unknown as Phaser.GameObjects.Rectangle;
-        // Oczy
-        this.add.circle(enemy.x - 6, enemy.y - 4, 4, 0xFFFFFF);
-        this.add.circle(enemy.x + 6, enemy.y - 4, 4, 0xFFFFFF);
-        this.enemySprites.set(enemy.id, sprite);
+      let container = this.enemySprites.get(enemy.id);
+      if (!container) {
+        const BROWN      = 0xB35900;
+        const DARK_BROWN = 0x5C2A00;
+        const TAN        = 0xE8C068;
+
+        const body    = this.add.ellipse(0, 0, 28, 22, BROWN);
+        const belly   = this.add.ellipse(0, 7, 20, 10, TAN);
+        const footL   = this.add.ellipse(-8, 13, 12, 7, DARK_BROWN);
+        const footR   = this.add.ellipse( 8, 13, 12, 7, DARK_BROWN);
+        const eyeWL   = this.add.circle(-7, -2, 5, 0xFFFFFF);
+        const eyeWR   = this.add.circle( 7, -2, 5, 0xFFFFFF);
+        const pupilL  = this.add.circle(-6, -1, 3, 0x111111);
+        const pupilR  = this.add.circle( 8, -1, 3, 0x111111);
+        const browL   = this.add.rectangle(-7, -8, 9, 3, DARK_BROWN).setAngle( 20);
+        const browR   = this.add.rectangle( 7, -8, 9, 3, DARK_BROWN).setAngle(-20);
+
+        container = this.add.container(enemy.x, enemy.y,
+          [body, belly, footL, footR, eyeWL, eyeWR, pupilL, pupilR, browL, browR],
+        ).setDepth(1);
+        this.enemySprites.set(enemy.id, container);
       }
-      sprite.setPosition(enemy.x, enemy.y);
+      container.setPosition(enemy.x, enemy.y);
+      container.setScale(enemy.facingRight ? 1 : -1, 1);
     });
 
     this.hud.update(state);
