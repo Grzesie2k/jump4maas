@@ -30,7 +30,7 @@ export class MapRenderer {
             groundGroup.create(x, y, "tiles", 0);
           } else {
             const obj = createRect(scene, x, y, TS, TS, 0x8B6914);
-            groundGroup.add(obj, true);
+            groundGroup.add(obj);
           }
 
         } else if (tile === Tile.Platform) {

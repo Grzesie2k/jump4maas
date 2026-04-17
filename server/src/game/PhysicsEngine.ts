@@ -145,14 +145,14 @@ export class PhysicsEngine {
       if (input.left)  player.facingRight = false;
       if (input.right) player.facingRight = true;
 
-      // 3. Gravity
-      player.vy += GRAVITY * dt;
-
-      // 4. Jump if grounded
+      // 3. Jump if grounded (applied before gravity so gravity accumulates correctly)
       if (input.jump && player.grounded) {
         player.vy       = JUMP_VELOCITY;
         player.grounded = false;
       }
+
+      // 4. Gravity
+      player.vy += GRAVITY * dt;
 
       // 5. Calculate new position
       const newX = player.x + player.vx * dt;

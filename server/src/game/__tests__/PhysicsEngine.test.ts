@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { PhysicsEngine } from "../PhysicsEngine";
 import { Tile } from "@shared/types";
 import { CONFIG, LEVEL_HEIGHT_PX } from "../../config";
