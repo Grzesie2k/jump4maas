@@ -151,6 +151,7 @@ export class GameScene extends Phaser.Scene {
         if (player.grounded) {
           this.localGrounded = true;
           this.localVy = 0;
+          this.localY  = player.y;  // snap Y — prevents gravity drift between server ticks
         }
         const mySprite = this.playerSprites.get(id);
         mySprite?.update(this.localX, this.localY, player);
