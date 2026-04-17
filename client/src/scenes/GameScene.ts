@@ -11,6 +11,7 @@ const LEVEL_H = 18 * 32;
 
 export class GameScene extends Phaser.Scene {
   private playerSprites = new Map<string, PlayerSprite>();
+  private readonly playerBodies  = new Map<string, Phaser.GameObjects.Container>();
   private enemySprites  = new Map<number, Phaser.GameObjects.Container>();
   private interpolators = new Map<string, Interpolator>();
   private hud!:          HUD;
@@ -41,6 +42,22 @@ export class GameScene extends Phaser.Scene {
   init(data: { layout: MapLayoutMessage }): void {
     this.mapLayout = data.layout;
     this.myId      = ColyseusClient.sessionId;
+
+    // Reset per-race state (Phaser reuses the instance on scene.start)
+    this.playerSprites.clear();
+    this.playerBodies.clear();
+    this.enemySprites.clear();
+    this.interpolators.clear();
+    this.localX          = 0;
+    this.localY          = 0;
+    this.localVy         = 0;
+    this.localGrounded   = false;
+    this.localEliminated = false;
+    this.cameraFollowing = false;
+    this.inputAccumulator = 0;
+    this.lastSeq          = 0;
+    this.lastInput        = { left: false, right: false, jump: false };
+    this.countdownText    = undefined;
   }
 
   create(): void {
