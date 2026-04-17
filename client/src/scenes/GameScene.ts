@@ -11,11 +11,16 @@ const LEVEL_H = 18 * 32;
 
 export class GameScene extends Phaser.Scene {
   private playerSprites = new Map<string, PlayerSprite>();
+  private playerBodies  = new Map<string, Phaser.Physics.Arcade.Body>();
   private enemySprites  = new Map<number, Phaser.GameObjects.Rectangle>();
   private interpolators = new Map<string, Interpolator>();
   private hud!:          HUD;
   private mapLayout!:    MapLayoutMessage;
   private myId:          string  = "";
+  
+  // Collision groups
+  private groundGroup!:   Phaser.Physics.Arcade.StaticGroup;
+  private platformGroup!: Phaser.Physics.Arcade.StaticGroup;
 
   // Lokalna predykcja
   private localX:        number  = 0;
@@ -46,7 +51,9 @@ export class GameScene extends Phaser.Scene {
     this.add.rectangle(LEVEL_W / 2, LEVEL_H / 2, LEVEL_W, LEVEL_H, 0x5C94FC);
 
     // Mapa
-    MapRenderer.build(this, this.mapLayout.tiles);
+    const { groundGroup, platformGroup } = MapRenderer.build(this, this.mapLayout.tiles);
+    this.groundGroup = groundGroup;
+    this.platformGroup = platformGroup;
 
     // Klawiatura
     this.keys = this.input.keyboard!.createCursorKeys();
@@ -120,6 +127,30 @@ export class GameScene extends Phaser.Scene {
 
     state.players.forEach((player, id) => {
       if (id === this.myId) {
+        if (!this.playerSprites.has(id)) {
+          this.localX = player.x;
+          this.localY = player.y;
+          const sprite = new PlayerSprite(this, player);
+          this.playerSprites.set(id, sprite);
+          
+          // Create physics body
+          const body = this.physics.add.existing(sprite.sprite, false) as unknown as Phaser.Physics.Arcade.Sprite;
+          const physicsBody = body.body as Phaser.Physics.Arcade.Body;
+          physicsBody.setSize(24, 40);
+          physicsBody.setDrag(0);
+          physicsBody.setGravityY(0); // Manual gravity in applyLocalPrediction
+          this.playerBodies.set(id, physicsBody);
+          
+          // Set up collisions
+          this.physics.add.collider(sprite.sprite, this.groundGroup, () => {
+            this.localGrounded = true;
+            this.localVy = 0;
+          });
+          this.physics.add.collider(sprite.sprite, this.platformGroup, () => {
+            this.localGrounded = true;
+            this.localVy = 0;
+          });
+        }
         // Korekta predykcji lokalnej
         const diffX = Math.abs(player.x - this.localX);
         const diffY = Math.abs(player.y - this.localY);
@@ -129,6 +160,7 @@ export class GameScene extends Phaser.Scene {
         }
         const mySprite = this.playerSprites.get(id);
         mySprite?.update(this.localX, this.localY, player);
+        
         if (mySprite) {
           this.cameras.main.startFollow(mySprite.sprite, true, 0.1, 0);
         }
@@ -204,15 +236,14 @@ export class GameScene extends Phaser.Scene {
     this.localX += vx * dt;
     this.localY += this.localVy * dt;
 
-    // Prosta kolizja z podłogą (aproksymacja — serwer jest autorytatywny)
-    const floorY = (18 - 2) * 32 - 40; // rząd 16 - PLAYER_H
-    if (this.localY > floorY) {
-      this.localY        = floorY;
-      this.localVy       = 0;
-      this.localGrounded = true;
-    }
-
+    // Clamp to level bounds
     this.localX = Phaser.Math.Clamp(this.localX, 0, LEVEL_W - 24);
+    
+    // Update physics body position
+    const physicsBody = this.playerBodies.get(this.myId);
+    if (physicsBody) {
+      physicsBody.setPosition(this.localX, this.localY);
+    }
   }
 
   // ── Wyniki ────────────────────────────────────────────────────────────────

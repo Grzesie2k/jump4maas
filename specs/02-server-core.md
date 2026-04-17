@@ -161,8 +161,8 @@ export class GameRoom extends Room<GameState> {
       this.hostId = next ?? "";
     }
 
-    // Jeśli race w toku i za mało graczy — zakończ wyścig
-    if (this.state.phase === "racing" && this.state.players.size < 2) {
+    // Jeśli race w toku i nie ma już żadnych graczy — zakończ wyścig
+    if (this.state.phase === "racing" && this.state.players.size < 1) {
       this.endRace();
     }
   }
@@ -184,7 +184,7 @@ export class GameRoom extends Room<GameState> {
   private handleStartRace(client: Client) {
     if (client.sessionId !== this.hostId) return;
     if (this.state.phase !== "waiting") return;
-    if (this.state.players.size < 2) return;
+    if (this.state.players.size < 1) return;  // gra możliwa od 1 gracza
     this.startCountdown();
   }
 
