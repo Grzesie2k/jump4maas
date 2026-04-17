@@ -1,26 +1,25 @@
 import type { IPlayerState } from "@shared/types";
 
 export class PlayerSprite {
-  sprite:    Phaser.GameObjects.Rectangle | Phaser.GameObjects.Sprite;
-  head!:     Phaser.GameObjects.Arc;
+  sprite:    Phaser.GameObjects.Graphics | Phaser.GameObjects.Sprite;
   nameLabel: Phaser.GameObjects.Text;
   ghostMode: boolean = false;
+
+  private color: number;
 
   constructor(
     private scene:  Phaser.Scene,
     private player: IPlayerState,
   ) {
+    this.color = Phaser.Display.Color.HexStringToColor(player.color).color;
     const hasSheet = scene.textures.exists("player");
 
     if (hasSheet) {
       this.sprite = scene.add.sprite(player.x, player.y, "player");
       this.createAnimations(scene);
     } else {
-      // Placeholder: kolorowy prostokąt z kółkiem
-      this.sprite = scene.add.rectangle(player.x, player.y, 24, 40, 0xffffff)
-        .setTint(Phaser.Display.Color.HexStringToColor(player.color).color);
-      this.head = scene.add.arc(player.x, player.y - 28, 12, 0, 360, false,
-        Phaser.Display.Color.HexStringToColor(player.color).color);
+      this.sprite = scene.add.graphics();
+      this.drawPlaceholder(this.sprite as Phaser.GameObjects.Graphics, player.x, player.y);
     }
 
     this.nameLabel = scene.add.text(player.x, player.y - 50, player.name, {
@@ -30,6 +29,14 @@ export class PlayerSprite {
       stroke:          "#000",
       strokeThickness: 2,
     }).setOrigin(0.5, 1);
+  }
+
+  private drawPlaceholder(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    g.clear();
+    g.fillStyle(this.color, this.ghostMode ? 0.35 : 1);
+    g.fillRect(-12, -20, 24, 40);  // ciało względem origin
+    g.fillCircle(0, -32, 12);      // głowa względem origin
+    g.setPosition(x, y);
   }
 
   private createAnimations(scene: Phaser.Scene): void {
@@ -44,40 +51,37 @@ export class PlayerSprite {
   }
 
   update(x: number, y: number, state: IPlayerState): void {
-    this.sprite.setPosition(x, y);
-    if (this.head) this.head.setPosition(x, y - 28);
-    this.nameLabel.setPosition(x, y - 44);
+    this.nameLabel.setPosition(x, y - 50);
 
     if (this.sprite instanceof Phaser.GameObjects.Sprite) {
-      const s = this.sprite;
-      s.setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
-      s.setFlipX(!state.facingRight);
+      this.sprite.setPosition(x, y);
+      this.sprite.setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
+      this.sprite.setFlipX(!state.facingRight);
 
       if (state.eliminated) {
-        s.play(`player_${state.id}_die`, true);
+        this.sprite.play(`player_${state.id}_die`, true);
       } else if (!state.grounded) {
-        s.play(state.vy < 0 ? `player_${state.id}_jump` : `player_${state.id}_fall`, true);
+        this.sprite.play(state.vy < 0 ? `player_${state.id}_jump` : `player_${state.id}_fall`, true);
       } else if (state.vx !== 0) {
-        s.play(`player_${state.id}_run`, true);
+        this.sprite.play(`player_${state.id}_run`, true);
       } else {
-        s.play(`player_${state.id}_idle`, true);
+        this.sprite.play(`player_${state.id}_idle`, true);
       }
-    } else {
-      (this.sprite as Phaser.GameObjects.Rectangle)
-        .setTint(Phaser.Display.Color.HexStringToColor(state.color).color);
-    }
 
-    if (this.ghostMode) {
-      this.sprite.setAlpha(0.35);
+      if (this.ghostMode) this.sprite.setAlpha(0.35);
+    } else {
+      this.color = Phaser.Display.Color.HexStringToColor(state.color).color;
+      this.drawPlaceholder(this.sprite as Phaser.GameObjects.Graphics, x, y);
     }
   }
 
   setGhostMode(): void {
     this.ghostMode = true;
-    this.sprite.setAlpha(0.35);
-    // Zanikanie
+    if (this.sprite instanceof Phaser.GameObjects.Sprite) {
+      this.sprite.setAlpha(0.35);
+    }
     this.scene.tweens.add({
-      targets:  [this.sprite, this.head, this.nameLabel].filter(Boolean),
+      targets:  [this.nameLabel],
       alpha:    0.35,
       duration: 500,
     });
@@ -85,7 +89,6 @@ export class PlayerSprite {
 
   destroy(): void {
     this.sprite.destroy();
-    this.head?.destroy();
     this.nameLabel.destroy();
   }
 }
