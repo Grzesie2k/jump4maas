@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platformer Party</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      color: #eee;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-container {
+      position: relative;
+      width: 800px;
+      height: 576px;
+    }
+
+    /* Phaser canvas trafia tutaj automatycznie */
+    #game-container canvas {
+      position: absolute;
+      top: 0; left: 0;
+    }
+
+    /* Warstwa UI — nad canvasem */
+    #ui-root {
+      position: absolute;
+      top: 0; left: 0;
+      width: 800px;
+      height: 576px;
+      pointer-events: none;   /* domyślnie nie blokuje kliknięć canvasa */
+    }
+
+    #ui-root .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      pointer-events: all;
+    }
+
+    #ui-root .screen.active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(26, 26, 46, 0.97);
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Phaser wstrzykuje canvas tutaj -->
+    <div id="ui-root">
+
+      <!-- Landing -->
+      <div id="screen-landing" class="screen active">
+        <h1 class="title">Platformer Party</h1>
+        <div class="form-group">
+          <label for="input-name">Your name</label>
+          <input id="input-name" type="text" maxlength="16" placeholder="Enter name..." autocomplete="off" />
+          <span id="name-error" class="error hidden"></span>
+        </div>
+        <button id="btn-play" class="btn btn-primary">Play</button>
+      </div>
+
+      <!-- Lobby -->
+      <div id="screen-lobby" class="screen">
+        <div class="lobby-header">
+          <h1 class="title">Platformer Party</h1>
+          <span id="lobby-playing-as">Playing as: —</span>
+        </div>
+
+        <div class="lobby-body">
+          <div class="rooms-header">
+            <h2>Available Rooms</h2>
+            <button id="btn-create-room" class="btn btn-secondary">+ Create Room</button>
+          </div>
+          <table id="rooms-table">
+            <thead>
+              <tr><th>Room Name</th><th>Players</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="rooms-tbody">
+              <!-- wypełniane dynamicznie -->
+            </tbody>
+          </table>
+          <p id="rooms-empty" class="rooms-empty hidden">No rooms available. Create one!</p>
+        </div>
+
+        <button id="btn-refresh" class="btn btn-ghost">Refresh</button>
+      </div>
+
+      <!-- Create Room modal -->
+      <div id="modal-create-room" class="modal hidden">
+        <div class="modal-box">
+          <h2>Create Room</h2>
+          <div class="form-group">
+            <label for="input-room-name">Room name</label>
+            <input id="input-room-name" type="text" maxlength="24" placeholder="Room name..." />
+          </div>
+          <div class="form-group">
+            <label>Max players</label>
+            <div class="radio-group" id="max-players-group">
+              <label><input type="radio" name="max-players" value="2" checked /> 2</label>
+              <label><input type="radio" name="max-players" value="3" /> 3</label>
+              <label><input type="radio" name="max-players" value="4" /> 4</label>
+              <label><input type="radio" name="max-players" value="5" /> 5</label>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button id="btn-modal-create" class="btn btn-primary">Create</button>
+            <button id="btn-modal-cancel" class="btn btn-ghost">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Room -->
+      <div id="screen-room" class="screen">
+        <div class="room-header">
+          <div>
+            <h1 id="room-title">Room Name</h1>
+            <span id="room-player-count">0 / 0 players</span>
+          </div>
+          <button id="btn-leave" class="btn btn-danger">Leave</button>
+        </div>
+
+        <div class="room-body">
+          <div class="players-list" id="room-players-list">
+            <!-- wypełniane dynamicznie -->
+          </div>
+          <p class="leaderboard-note">Leaderboard updates after each race.</p>
+        </div>
+
+        <div class="room-footer" id="room-footer-host" style="display:none">
+          <button id="btn-start-race" class="btn btn-primary" disabled>Start Race</button>
+          <p id="start-race-hint" class="hint">Need 2+ players</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
